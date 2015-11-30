@@ -4,6 +4,7 @@
 import Control.Exception
 import Data.OpenUnion
 import Data.Typeable
+import TypeFun.Data.List hiding (Union)
 
 data Exc1 = Exc1
             deriving (Eq, Ord, Show, Typeable)
@@ -19,6 +20,10 @@ showException :: ExcUnion -> IO String
 showException = return . show
 
 type MyUnion = Union '[Char, Int, [()]]
+type MySubUnion = Union '[Char, Int]
+
+liftSome :: (Typeable a, Elem a '[String, Int, a]) => a -> Union '[String, Int, a]
+liftSome a = liftUnion a
 
 showMyUnion :: MyUnion -> String
 showMyUnion
@@ -41,6 +46,9 @@ main = do
     putStrLn $ show $ u1 == u1
     putStrLn $ show $ u1 == u2
     putStrLn $ show $ u1 == u3
+    putStrLn $ case splitUnion u1 of
+      Right (u :: MySubUnion) -> show u
+      Left u                  -> show u
 
     print =<< catch (throwIO Exc1) showException
     print =<< catch (throwIO Exc2) showException

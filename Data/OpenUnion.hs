@@ -2,9 +2,12 @@
 module Data.OpenUnion
     ( Union
     , (@>)
+    , (@!>)
     , liftUnion
     , reUnion
     , restrict
+    , strictlyRestrict
+    , SplitUnion(..)
     , typesExhausted
     ) where
 

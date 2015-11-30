@@ -18,6 +18,8 @@ module Data.OpenUnion.Internal
     , liftUnion
     , reUnion
     , restrict
+    , strictlyRestrict
+    , SplitUnion(..)
     , typesExhausted
     ) where
 
@@ -111,7 +113,7 @@ infixr 2 @>
       -> (Union (Delete a s) -> b)
       -> Union s
       -> b
-r @!> l = either l r . restrict
+r @!> l = either l r . strictlyRestrict
 infixr 2 @!>
 {-# INLINE (@!>) #-}
 
@@ -124,10 +126,30 @@ restrict :: Typeable a => Union s -> Either (Union (Delete a s)) a
 restrict (Union d) = maybe (Left $ Union d) Right $ fromDynamic d
 {-# INLINE restrict #-}
 
+strictlyRestrict :: (Typeable a, Elem a s) => Union s -> Either (Union (Delete a s)) a
+strictlyRestrict = restrict
+{-# INLINE strictlyRestrict #-}
+
 -- | Generalize a @Union@.
 reUnion :: (SubList s s') => Union s -> Union s'
 reUnion (Union d) = Union d
 {-# INLINE reUnion #-}
+
+class SplitUnion els lefts rights | els rights -> lefts where
+  -- | Splits union to two separate unions. Returns either Right or
+  -- Left depending on what typelist inner element's type belong.
+  splitUnion :: Union els -> Either (Union lefts) (Union rights)
+
+instance ( Typeable a, SplitUnion (Delete a els) lefts as
+         , SubList as (a ': as) )
+         => SplitUnion els lefts (a ': as) where
+  splitUnion u = case restrict u of
+    Right (a :: a) -> Right $ liftUnion a
+    Left other -> fmap (reUnion :: Union as -> Union (a ': as))
+                $ splitUnion other
+
+instance SplitUnion els els '[] where
+  splitUnion u = Left u
 
 -- | Use this in places where all the @Union@ed options have been exhausted.
 typesExhausted :: Union '[] -> a
